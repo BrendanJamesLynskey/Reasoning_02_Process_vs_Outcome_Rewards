@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reasoning 02 — PRMs, ORMs, MCTS and Verifier-Scored Sampling</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0a;
+            --bg-card: #0d1117;
+            --bg-code: #161b22;
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --accent: #76B900;
+            --accent-dim: #76B90044;
+            --accent-glow: #76B90033;
+            --border: #21262d;
+            --font-display: 'Space Grotesk', sans-serif;
+            --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+            --font-body: 'Inter', sans-serif;
+            --max-width: 900px;
+        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+        body {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: var(--font-body);
+            font-size: 17px;
+            line-height: 1.7;
+            overflow-x: hidden;
+        }
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem 1.5rem;
+            text-align: center;
+            position: relative;
+        }
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+        .hero > * { position: relative; z-index: 1; }
+        .series-label {
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            color: var(--accent);
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            margin-bottom: 1rem;
+        }
+        .hero h1 {
+            font-family: var(--font-display);
+            font-size: clamp(2rem, 5vw, 3.2rem);
+            font-weight: 700;
+            color: var(--text-primary);
+            line-height: 1.2;
+            margin-bottom: 1rem;
+        }
+        .hero h1 .accent { color: var(--accent); }
+        .hero .subtitle {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            max-width: 640px;
+            margin-bottom: 2rem;
+        }
+        .tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            justify-content: center;
+            margin-bottom: 2.5rem;
+        }
+        .tag {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            border: 1px solid var(--accent);
+            color: var(--accent);
+            background: var(--accent-dim);
+            white-space: nowrap;
+        }
+        .pipeline {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+            gap: 0.25rem;
+            margin-bottom: 1rem;
+            max-width: var(--max-width);
+        }
+        .pipeline-step {
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            padding: 0.3rem 0.7rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text-secondary);
+            white-space: nowrap;
+        }
+        .pipeline-arrow { color: var(--accent); font-size: 0.9rem; font-weight: 700; }
+        .slide {
+            min-height: 100vh;
+            max-width: var(--max-width);
+            margin: 0 auto;
+            padding: 4rem 1.5rem;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .slide-number {
+            font-family: var(--font-display);
+            font-size: 5rem;
+            font-weight: 700;
+            color: var(--accent-dim);
+            position: absolute;
+            top: 2rem;
+            right: 1.5rem;
+            line-height: 1;
+            user-select: none;
+        }
+        .slide h2 {
+            font-family: var(--font-display);
+            font-size: 1.9rem;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 1.5rem;
+            line-height: 1.25;
+        }
+        .slide h3 {
+            font-family: var(--font-display);
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+        }
+        .slide p { margin-bottom: 1rem; color: var(--text-secondary); }
+        .slide p strong { color: var(--text-primary); }
+        .slide ul, .slide ol { margin-bottom: 1rem; padding-left: 1.5rem; color: var(--text-secondary); }
+        .slide li { margin-bottom: 0.4rem; }
+        .slide li strong { color: var(--text-primary); }
+        .slide code {
+            font-family: var(--font-mono);
+            font-size: 0.88em;
+            background: var(--bg-code);
+            border: 1px solid var(--border);
+            padding: 0.05rem 0.35rem;
+            border-radius: 3px;
+            color: #c9d1d9;
+        }
+        .code-block {
+            background: var(--bg-code);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin: 1.25rem 0;
+            overflow: hidden;
+        }
+        .code-header {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--accent);
+            background: rgba(118, 185, 0, 0.08);
+            padding: 0.4rem 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+        .code-block pre { margin: 0; padding: 1rem; overflow-x: auto; }
+        .code-block code {
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            line-height: 1.6;
+            color: #c9d1d9;
+            background: transparent;
+            border: none;
+            padding: 0;
+        }
+        .kw { color: #ff7b72; }
+        .fn { color: #d2a8ff; }
+        .str { color: #a5d6ff; }
+        .cm { color: #8b949e; font-style: italic; }
+        .num { color: #79c0ff; }
+        .type { color: #ffa657; }
+        .dir { color: #ff7b72; }
+        .mac { color: #ffa657; }
+        .table-wrap {
+            overflow-x: auto;
+            margin: 1.25rem 0;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+        table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        th {
+            background: var(--bg-code);
+            color: var(--accent);
+            font-weight: 600;
+            text-align: left;
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border);
+            font-family: var(--font-display);
+            white-space: nowrap;
+        }
+        td {
+            padding: 0.6rem 1rem;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-secondary);
+        }
+        tr:last-child td { border-bottom: none; }
+        tr:nth-child(even) td { background: rgba(13, 17, 23, 0.5); }
+        .diagram-flow {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            margin: 1.5rem 0;
+            padding: 1.5rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+        .diagram-box {
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            padding: 0.5rem 1rem;
+            background: var(--bg-code);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-primary);
+            text-align: center;
+            white-space: nowrap;
+        }
+        .diagram-box.accent { border-color: var(--accent); color: var(--accent); background: rgba(118, 185, 0, 0.08); }
+        .diagram-box.dim { color: var(--text-secondary); border-color: var(--border); }
+        .diagram-arrow { color: var(--accent); font-size: 1.3rem; font-weight: 700; }
+        .diagram-vertical {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.3rem;
+            margin: 1.5rem 0;
+            padding: 1.5rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+        .diagram-vertical .diagram-arrow { font-size: 1.1rem; }
+        .hierarchy {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            margin: 1.5rem 0;
+            padding: 1.5rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+        .hierarchy-level { display: flex; align-items: center; gap: 0.75rem; }
+        .hierarchy-label {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            min-width: 80px;
+            text-align: right;
+        }
+        .hierarchy-items { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+        .hierarchy-item {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            padding: 0.3rem 0.6rem;
+            border-radius: 4px;
+            background: var(--bg-code);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+        }
+        .hierarchy-item.accent { border-color: var(--accent); color: var(--accent); background: rgba(118, 185, 0, 0.08); }
+        .diagram-grid {
+            display: grid;
+            gap: 0.75rem;
+            margin: 1.5rem 0;
+            padding: 1.5rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+        .diagram-grid.cols-2 { grid-template-columns: 1fr 1fr; }
+        .diagram-grid.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+        .diagram-panel {
+            padding: 1rem;
+            background: var(--bg-code);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+        }
+        .diagram-panel.accent-border { border-left: 3px solid var(--accent); }
+        .diagram-panel h4 {
+            font-family: var(--font-display);
+            font-size: 1rem;
+            color: var(--accent);
+            margin-bottom: 0.5rem;
+        }
+        .diagram-panel p, .diagram-panel ul { font-size: 0.85rem; }
+        .callout {
+            background: var(--bg-card);
+            border-left: 3px solid var(--accent);
+            border-radius: 0 8px 8px 0;
+            padding: 1rem 1.25rem;
+            margin: 1.25rem 0;
+        }
+        .callout p { margin-bottom: 0; }
+        .callout p + p { margin-top: 0.5rem; }
+        .callout .callout-label {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 0.3rem;
+        }
+        .contents-list { list-style: none; padding-left: 0; counter-reset: contents; }
+        .contents-list li {
+            counter-increment: contents;
+            padding: 0.6rem 0;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .contents-list li:last-child { border-bottom: none; }
+        .contents-list li::before {
+            content: counter(contents, decimal-leading-zero);
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            color: var(--accent);
+            min-width: 2rem;
+        }
+        .contents-list a { color: var(--text-primary); text-decoration: none; transition: color 0.2s; }
+        .contents-list a:hover { color: var(--accent); }
+        .footer {
+            text-align: center;
+            padding: 3rem 1.5rem;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            border-top: 1px solid var(--border);
+            max-width: var(--max-width);
+            margin: 0 auto;
+        }
+        .footer a { color: var(--accent); text-decoration: none; }
+        .footer a:hover { text-decoration: underline; }
+        .canvas-wrap {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1.25rem 0;
+            overflow-x: auto;
+        }
+        .canvas-wrap canvas, .canvas-wrap svg { display: block; margin: 0 auto; max-width: 100%; }
+        .badge {
+            display: inline-block;
+            font-family: var(--font-mono);
+            font-size: 0.65rem;
+            padding: 0.1rem 0.45rem;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            vertical-align: middle;
+            margin-left: 0.3rem;
+        }
+        .badge.ok    { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+        .badge.warn  { border-color: #ffa657; color: #ffa657; background: rgba(255,166,87,0.08); }
+        .badge.bad   { border-color: #ff7b72; color: #ff7b72; background: rgba(255,123,114,0.08); }
+        @media (max-width: 640px) {
+            .slide { padding: 3rem 1rem; min-height: auto; }
+            .slide-number { font-size: 3rem; top: 1.5rem; right: 1rem; }
+            .slide h2 { font-size: 1.5rem; }
+            .diagram-grid.cols-2, .diagram-grid.cols-3 { grid-template-columns: 1fr; }
+            .pipeline { gap: 0.15rem; }
+            .pipeline-step { font-size: 0.6rem; padding: 0.2rem 0.4rem; }
+            .hero h1 { font-size: 1.8rem; }
+            table { font-size: 0.78rem; }
+        }
+    </style>
+</head>
+<body>
+<header class="hero">
+    <div class="series-label">Reasoning Models Series &mdash; Presentation 02</div>
+    <h1><span class="accent">Process vs Outcome</span> Reward Models</h1>
+    <p class="subtitle">PRMs, ORMs, MCTS-guided decoding, verifier-scored sampling, tree-of-thought &mdash; the reward machinery that drives reasoning quality.</p>
+
+    <div class="tags">
+        <span class="tag">PRM</span>
+        <span class="tag">ORM</span>
+        <span class="tag">MCTS</span>
+        <span class="tag">Math-Shepherd</span>
+        <span class="tag">PRM800K</span>
+        <span class="tag">Tree-of-Thought</span>
+        <span class="tag">Verifier Sampling</span>
+    </div>
+
+    <div class="pipeline">
+        <span class="pipeline-step">Prompt</span>
+        <span class="pipeline-arrow">&rarr;</span>
+        <span class="pipeline-step">Policy rollouts</span>
+        <span class="pipeline-arrow">&rarr;</span>
+        <span class="pipeline-step">Step scoring (PRM)</span>
+        <span class="pipeline-arrow">&rarr;</span>
+        <span class="pipeline-step">Tree search</span>
+        <span class="pipeline-arrow">&rarr;</span>
+        <span class="pipeline-step">Best answer</span>
+    </div>
+</header>
+
+<section class="slide" id="slide-00">
+    <div class="slide-number">00</div>
+    <h2>Topics We'll Cover</h2>
+    <ul class="contents-list">
+        <li><a href="#slide-01">PRMs vs ORMs &mdash; What Each Rewards</a></li>
+        <li><a href="#slide-02">PRM Construction &mdash; Step-Level Human Labels</a></li>
+        <li><a href="#slide-03">Math-Shepherd &amp; PRM800K</a></li>
+        <li><a href="#slide-04">MCTS-Guided Decoding</a></li>
+        <li><a href="#slide-05">Verifier-Scored Sampling</a></li>
+        <li><a href="#slide-06">Tree-of-Thought in Production</a></li>
+        <li><a href="#slide-07">Self-Consistency vs Verifier-Based</a></li>
+        <li><a href="#slide-08">Cost-Quality Curves</a></li>
+        <li><a href="#slide-09">What to Take Away</a></li>
+    </ul>
+</section>
+
+<section class="slide" id="slide-01">
+    <div class="slide-number">01</div>
+    <h2>PRMs vs ORMs &mdash; What Each Rewards</h2>
+    <p>Both PRMs and ORMs are classifiers trained to evaluate model-generated reasoning. The distinction is <em>granularity</em>: where in the reasoning chain the reward signal is applied.</p>
+
+    <div class="diagram-grid cols-2">
+        <div class="diagram-panel accent-border">
+            <h4>Outcome Reward Model (ORM)</h4>
+            <p>Given a complete solution, predict <strong>correct / incorrect</strong>. Training signal: final-answer accuracy (symbolic check). Fast to label &mdash; thousands of examples per GPU-hour. Sparse signal: no feedback on intermediate steps, so the model can reach a correct answer via wrong reasoning.</p>
+        </div>
+        <div class="diagram-panel accent-border">
+            <h4>Process Reward Model (PRM)</h4>
+            <p>Given a solution prefix up to step <em>k</em>, predict whether this <strong>step is correct</strong>. Dense signal: every reasoning step gets a score. Harder to label &mdash; requires either human raters per step or automated step-level monte-carlo estimation. Trains more reliable reasoning behaviours.</p>
+        </div>
+    </div>
+
+    <div class="callout">
+        <div class="callout-label">Why the distinction matters for RL</div>
+        <p>With an ORM, a policy gradient update propagates reward from the final answer back through the full trace uniformly &mdash; every step gets credit whether it helped or not. With a PRM you can identify exactly which steps were erroneous and assign negative reward there, producing much sharper policy gradients. The downside: PRM training data is expensive.</p>
+    </div>
+
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>Property</th><th>ORM</th><th>PRM</th></tr></thead>
+            <tbody>
+                <tr><td>Label granularity</td><td>Final answer only</td><td>Per reasoning step</td></tr>
+                <tr><td>Label cost</td><td>Low (automated check)</td><td>High (rater per step, or MC estimate)</td></tr>
+                <tr><td>Reward density</td><td>Sparse (end of trace)</td><td>Dense (each step)</td></tr>
+                <tr><td>Reward hacking risk</td><td>High (correct answer, wrong path)</td><td>Lower (each step vetted)</td></tr>
+                <tr><td>Best use</td><td>Best-of-N selection, fast RL</td><td>MCTS guidance, fine-grained RL signal</td></tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section class="slide" id="slide-02">
+    <div class="slide-number">02</div>
+    <h2>PRM Construction &mdash; Step-Level Human Labels</h2>
+    <p>OpenAI's PRM800K dataset (Lightman et al., 2023) is the canonical reference for human-labelled process rewards. Annotators were shown model-generated solution prefixes one step at a time and asked to rate each step: <strong>positive</strong> (correct, likely to lead to a correct answer), <strong>negative</strong> (incorrect), or <strong>neutral</strong> (correct but not helpful).</p>
+
+    <div class="callout">
+        <div class="callout-label">What counts as a step?</div>
+        <p>PRM800K uses a &ldquo;natural step&rdquo; segmentation &mdash; each paragraph of a solution is one step. The model itself generates the segmentation as part of its output format (a newline-separated chain-of-thought). Steps are typically 1&ndash;4 sentences of maths prose plus an equation.</p>
+    </div>
+
+    <div class="canvas-wrap">
+        <svg viewBox="0 0 700 240" width="700" height="240" xmlns="http://www.w3.org/2000/svg">
+            <style>
+                .stepbox { fill: #161b22; stroke: #21262d; rx: 4; }
+                .steppos { fill: rgba(118,185,0,0.10); stroke: #76B900; }
+                .stepneg { fill: rgba(255,123,114,0.10); stroke: #ff7b72; }
+                .stepneu { fill: rgba(255,166,87,0.10); stroke: #ffa657; }
+                .steptxt { fill: #e6edf3; font-family: 'Space Grotesk', sans-serif; font-size: 11px; }
+                .steplab { fill: #76B900; font-family: 'JetBrains Mono', monospace; font-size: 10px; }
+                .steplabN { fill: #ff7b72; font-family: 'JetBrains Mono', monospace; font-size: 10px; }
+                .steplabW { fill: #ffa657; font-family: 'JetBrains Mono', monospace; font-size: 10px; }
+                .arr { stroke: #30363d; stroke-width: 1; fill: none; marker-end: url(#msm); }
+                .ttl { fill: #76B900; font-family: 'Space Grotesk', sans-serif; font-size: 12px; font-weight: 600; }
+            </style>
+            <defs>
+                <marker id="msm" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                    <path d="M 0 0 L 10 5 L 0 10 z" fill="#30363d"/>
+                </marker>
+            </defs>
+            <text x="10" y="20" class="ttl">PRM annotation: each step in a chain-of-thought is labelled independently</text>
+            <rect x="10"  y="35" width="130" height="60" rx="4" class="steppos"/>
+            <text x="20"  y="55" class="steptxt">Step 1</text>
+            <text x="20"  y="70" class="steptxt">Let x = n(n+1)/2.</text>
+            <text x="20"  y="85" class="steptxt">Correct algebra.</text>
+            <text x="150" y="68" class="steplab">&#x2713; positive</text>
+            <line x1="145" y1="65" x2="165" y2="65" class="arr"/>
+            <rect x="180" y="35" width="130" height="60" rx="4" class="stepneu"/>
+            <text x="190" y="55" class="steptxt">Step 2</text>
+            <text x="190" y="70" class="steptxt">Note x &lt; n&sup2;.</text>
+            <text x="190" y="85" class="steptxt">True, not helpful.</text>
+            <text x="320" y="68" class="steplabW">~ neutral</text>
+            <line x1="315" y1="65" x2="335" y2="65" class="arr"/>
+            <rect x="350" y="35" width="130" height="60" rx="4" class="stepneg"/>
+            <text x="360" y="55" class="steptxt">Step 3</text>
+            <text x="360" y="70" class="steptxt">So x mod 3 = 1.</text>
+            <text x="360" y="85" class="steptxt">Wrong claim.</text>
+            <text x="490" y="68" class="steplabN">&#x2717; negative</text>
+            <line x1="485" y1="65" x2="505" y2="65" class="arr"/>
+            <rect x="520" y="35" width="130" height="60" rx="4" class="steppos"/>
+            <text x="530" y="55" class="steptxt">Step 4</text>
+            <text x="530" y="70" class="steptxt">Therefore answer=42.</text>
+            <text x="530" y="85" class="steptxt">Correct (lucky).</text>
+
+            <text x="10" y="145" class="ttl">ORM sees only the final answer &mdash; rewards the lucky correct answer despite Step 3 error</text>
+            <rect x="10" y="160" width="640" height="30" rx="4" class="stepneu"/>
+            <text x="20" y="180" class="steptxt">ORM: full trace &rarr; correct (1.0 reward, no step differentiation)</text>
+
+            <text x="10" y="215" class="ttl">PRM assigns negative reward to Step 3 &mdash; correct policy gradient signal</text>
+            <rect x="10" y="225" width="640" height="10" rx="2" class="stepneg"/>
+        </svg>
+    </div>
+</section>
+
+<section class="slide" id="slide-03">
+    <div class="slide-number">03</div>
+    <h2>Math-Shepherd &amp; PRM800K</h2>
+    <p>Two landmark datasets drove the field's understanding of process-level supervision. Their differences reveal the fundamental labelling trade-off.</p>
+
+    <div class="diagram-grid cols-2">
+        <div class="diagram-panel accent-border">
+            <h4>PRM800K &mdash; Lightman et al., OpenAI 2023</h4>
+            <p><strong>800k step-level labels</strong> across 75k MATH solutions. Human annotators rated each step positive/neutral/negative. The resulting PRM, when used as a best-of-N selector, raised MATH accuracy by 20+ pp over ORM-selected best-of-N at N=1860. The PRM was released publicly; the model weights were not. Three-label scheme.</p>
+        </div>
+        <div class="diagram-panel accent-border">
+            <h4>Math-Shepherd &mdash; Wang et al., 2023</h4>
+            <p><strong>Automated step-level labels</strong> via Monte Carlo estimation. For each prefix, K completions are sampled; fraction that reach a correct answer = estimated step correctness. Scales to arbitrary dataset size at inference cost only. Labels are noisier than human; performance lags PRM800K by &asymp;3 pp but costs 100&times; less to produce.</p>
+        </div>
+    </div>
+
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>Dataset</th><th>Size</th><th>Label method</th><th>Label cost</th><th>PRM quality (MATH best-of-N)</th></tr></thead>
+            <tbody>
+                <tr><td>PRM800K</td><td>800k steps (75k problems)</td><td>Human (3-label)</td><td>Very high</td><td>78.2% @ N=1860</td></tr>
+                <tr><td>Math-Shepherd</td><td>390k steps, auto-extensible</td><td>MC estimation (K=8)</td><td>Low (inference only)</td><td>&asymp;75% @ N=256</td></tr>
+                <tr><td>ProcessBench</td><td>3,400 annotated traces</td><td>Human (error localisation)</td><td>High</td><td>Evaluation set; not for training</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="callout">
+        <div class="callout-label">The MC estimation formula (Math-Shepherd)</div>
+        <p>For step <em>s<sub>k</sub></em> in a partial solution, sample K completions from the policy conditioned on the prefix up to <em>s<sub>k</sub></em>. Score each completion with a symbolic checker. PRM label = <strong>E[correct | prefix<sub>k</sub>] = count(correct) / K</strong>. Requires K&times;(max steps) forward passes per training example &mdash; typically K=8, 5&ndash;15 steps &rarr; 40&ndash;120 model calls per label.</p>
+    </div>
+</section>
+
+<section class="slide" id="slide-04">
+    <div class="slide-number">04</div>
+    <h2>MCTS-Guided Decoding</h2>
+    <p>Monte Carlo Tree Search (MCTS) replaces greedy or beam decoding with a principled search over the reasoning tree. At each decision point, the tree is expanded by sampling candidate next-steps; the PRM scores each node; UCB (Upper Confidence Bound) selects which branch to explore next.</p>
+
+    <div class="canvas-wrap">
+        <svg viewBox="0 0 700 280" width="700" height="280" xmlns="http://www.w3.org/2000/svg">
+            <style>
+                .node { fill: #161b22; stroke: #30363d; }
+                .node.acc { fill: rgba(118,185,0,0.10); stroke: #76B900; }
+                .node.bad { fill: rgba(255,123,114,0.08); stroke: #ff7b72; }
+                .node.sel { fill: rgba(118,185,0,0.20); stroke: #76B900; stroke-width:2; }
+                .ntxt { fill: #e6edf3; font-family: 'JetBrains Mono', monospace; font-size: 10px; text-anchor: middle; }
+                .nsub { fill: #8b949e; font-family: 'JetBrains Mono', monospace; font-size: 9px; text-anchor: middle; }
+                .edge { stroke: #30363d; stroke-width: 1; fill: none; }
+                .edgea { stroke: #76B900; stroke-width: 1.5; fill: none; stroke-dasharray: 4 2; }
+                .ttl { fill: #76B900; font-family: 'Space Grotesk', sans-serif; font-size: 12px; font-weight: 600; }
+            </style>
+            <text x="10" y="18" class="ttl">MCTS reasoning tree &mdash; each node is a partial solution; PRM scores guide expansion</text>
+            <!-- Root -->
+            <rect x="310" y="30" width="80" height="36" rx="4" class="node acc"/>
+            <text x="350" y="48" class="ntxt">Root</text>
+            <text x="350" y="60" class="nsub">Q=0.0</text>
+            <!-- Level 1 -->
+            <rect x="100" y="110" width="80" height="36" rx="4" class="node"/>
+            <text x="140" y="128" class="ntxt">Step 1a</text>
+            <text x="140" y="140" class="nsub">PRM=0.82</text>
+            <rect x="310" y="110" width="80" height="36" rx="4" class="node sel"/>
+            <text x="350" y="128" class="ntxt">Step 1b</text>
+            <text x="350" y="140" class="nsub">PRM=0.91 &#x2605;</text>
+            <rect x="520" y="110" width="80" height="36" rx="4" class="node bad"/>
+            <text x="560" y="128" class="ntxt">Step 1c</text>
+            <text x="560" y="140" class="nsub">PRM=0.21</text>
+            <line x1="350" y1="66" x2="140" y2="110" class="edge"/>
+            <line x1="350" y1="66" x2="350" y2="110" class="edgea"/>
+            <line x1="350" y1="66" x2="560" y2="110" class="edge"/>
+            <!-- Level 2 from 1b -->
+            <rect x="225" y="195" width="80" height="36" rx="4" class="node"/>
+            <text x="265" y="213" class="ntxt">Step 2a</text>
+            <text x="265" y="225" class="nsub">PRM=0.78</text>
+            <rect x="395" y="195" width="80" height="36" rx="4" class="node acc"/>
+            <text x="435" y="213" class="ntxt">Step 2b</text>
+            <text x="435" y="225" class="nsub">PRM=0.95 &#x2605;</text>
+            <line x1="350" y1="146" x2="265" y2="195" class="edge"/>
+            <line x1="350" y1="146" x2="435" y2="195" class="edgea"/>
+            <!-- Final answer -->
+            <rect x="370" y="255" width="130" height="20" rx="4" class="node sel"/>
+            <text x="435" y="269" class="ntxt">Answer emitted</text>
+            <line x1="435" y1="231" x2="435" y2="255" class="edgea"/>
+        </svg>
+    </div>
+
+    <h3>UCB selection formula</h3>
+    <div class="callout">
+        <div class="callout-label">Upper Confidence Bound for Trees</div>
+        <p>UCB score for node <em>n</em>: <strong>Q(n) + c &middot; &radic;(ln N(parent) / N(n))</strong> where <em>Q(n)</em> is the PRM value estimate (backed up from simulations), <em>N</em> is visit count, and <em>c</em> is the exploration constant (typically 1.0&ndash;2.0). The PRM replaces the rollout value function; no full simulation to terminal state is needed.</p>
+    </div>
+</section>
+
+<section class="slide" id="slide-05">
+    <div class="slide-number">05</div>
+    <h2>Verifier-Scored Sampling</h2>
+    <p>Verifier-scored sampling is a simpler alternative to MCTS: generate N complete solutions independently from the policy, score each with a verifier (ORM or PRM), and return the highest-scoring one. No tree; no incremental expansion. The key design choices are: what to generate, how many, and what to score with.</p>
+
+    <div class="diagram-flow">
+        <div class="diagram-box">Policy &pi;</div>
+        <div class="diagram-arrow">&rarr;</div>
+        <div class="diagram-box accent">Sample N solutions<br><small>N = 4 / 16 / 64 / 256</small></div>
+        <div class="diagram-arrow">&rarr;</div>
+        <div class="diagram-box">Score each with verifier<br><small>ORM / PRM / symbolic</small></div>
+        <div class="diagram-arrow">&rarr;</div>
+        <div class="diagram-box accent">Return argmax<br><small>or weighted vote</small></div>
+    </div>
+
+    <h3>Variants</h3>
+    <div class="diagram-grid cols-3">
+        <div class="diagram-panel accent-border">
+            <h4>Best-of-N (ORM)</h4>
+            <p>Score final answers with an ORM classifier. Cheapest to implement. Effective when the ORM is well-calibrated. Diminishing returns after N&asymp;64.</p>
+        </div>
+        <div class="diagram-panel accent-border">
+            <h4>Best-of-N (PRM)</h4>
+            <p>Score by minimum PRM score along the trace (&ldquo;weakest-link&rdquo;) or product of step scores. Better at catching flawed-reasoning paths that happen to reach the right answer.</p>
+        </div>
+        <div class="diagram-panel accent-border">
+            <h4>Weighted majority vote</h4>
+            <p>Weight each candidate's vote by its verifier score. Combines coverage (many answers) with discrimination (trust high-confidence ones). Effective for discrete answer spaces.</p>
+        </div>
+    </div>
+
+    <div class="callout">
+        <div class="callout-label">Scaling law for best-of-N</div>
+        <p>Empirically, MATH accuracy with best-of-N roughly follows <strong>accuracy(N) &asymp; 1 &minus; (1 &minus; p)<sup>N</sup></strong> where <em>p</em> is the per-sample probability of a correct answer. This saturates quickly for high-p tasks. For low-p tasks (Olympiad-level) even N=256 may be insufficient, and MCTS with a strong PRM outperforms best-of-N for the same compute budget.</p>
+    </div>
+</section>
+
+<section class="slide" id="slide-06">
+    <div class="slide-number">06</div>
+    <h2>Tree-of-Thought in Production</h2>
+    <p>Tree-of-Thought (ToT; Yao et al., 2023) is a prompting-level framework that exposes tree-structured reasoning to the LLM as a zero-shot behaviour, without modifying the model or training a PRM. The model is asked to generate candidate intermediate thoughts, self-evaluate them, and continue from the most promising.</p>
+
+    <div class="code-block">
+        <div class="code-header">Minimal ToT prompt skeleton (adapted from Yao et al., 2023)</div>
+<pre><code><span class="cm">"""
+Imagine three independent experts are solving this problem step by step.
+Each expert writes one step of their reasoning, then all steps are shared.
+Any expert who realises their step is flawed silently drops out.
+Continue until the answer is reached or only one expert remains.
+"""</span>
+
+PROBLEM = <span class="str">"Find all integer solutions to x&sup2; + y&sup2; = 2025."</span>
+
+<span class="cm"># Typical system: BFS or DFS over LLM-generated continuations.</span>
+<span class="cm"># Evaluation: LLM self-scores each branch 1-10; prune below threshold 6.</span>
+<span class="cm"># Depth limit: 5 steps. Branching factor: 3.</span>
+<span class="cm"># Total LLM calls: up to 3^5 = 243 for DFS; BFS is wider but stops earlier.</span></code></pre>
+    </div>
+
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>Approach</th><th>External verifier needed?</th><th>LLM calls (depth 5, branch 3)</th><th>Production complexity</th></tr></thead>
+            <tbody>
+                <tr><td>Standard CoT</td><td>No</td><td>1</td><td>Trivial</td></tr>
+                <tr><td>Tree-of-Thought (self-eval)</td><td>No (LLM self-scores)</td><td>Up to 243</td><td>Moderate (loop + state)</td></tr>
+                <tr><td>Best-of-N + ORM</td><td>Yes (ORM)</td><td>N + N</td><td>Low (embarrassingly parallel)</td></tr>
+                <tr><td>MCTS + PRM</td><td>Yes (PRM)</td><td>Adaptive (UCB)</td><td>High (tree state + PRM)</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="callout">
+        <div class="callout-label">Why ToT underperforms trained PRMs in practice</div>
+        <p>LLM self-evaluation of reasoning steps is poorly calibrated &mdash; the model tends to give high scores to confident-sounding but incorrect steps. A trained PRM with even 50k examples significantly outperforms ToT self-scoring. The original ToT paper used GPT-4 on Game-of-24 and crossword puzzles &mdash; tasks where self-evaluation is easier. On formal maths, ToT without an external scorer is near-random pruning.</p>
+    </div>
+</section>
+
+<section class="slide" id="slide-07">
+    <div class="slide-number">07</div>
+    <h2>Self-Consistency vs Verifier-Based</h2>
+    <p>Self-consistency (Wang et al., 2022) is the cheapest ensemble approach: sample N answers and take a majority vote. No verifier needed. It works because independent samples are unlikely to make the same error, so the correct answer has higher multiplicity. The question is: when does a trained verifier beat majority vote?</p>
+
+    <div class="canvas-wrap">
+        <svg viewBox="0 0 700 230" width="700" height="230" xmlns="http://www.w3.org/2000/svg">
+            <style>
+                .bax { stroke: #30363d; stroke-width: 1; }
+                .bgl { stroke: #21262d; stroke-width: 0.5; stroke-dasharray: 3 3; }
+                .blb { fill: #8b949e; font-family: 'JetBrains Mono', monospace; font-size: 10px; }
+                .btt { fill: #76B900; font-family: 'Space Grotesk', sans-serif; font-size: 12px; font-weight: 600; }
+                .bar1 { fill: rgba(118,185,0,0.7); }
+                .bar2 { fill: rgba(210,168,255,0.5); }
+                .bar3 { fill: rgba(255,166,87,0.5); }
+            </style>
+            <text x="10" y="18" class="btt">MATH accuracy vs N (schematic, Llama-70B regime)</text>
+            <line x1="60" y1="30" x2="60" y2="190" class="bax"/>
+            <line x1="60" y1="190" x2="660" y2="190" class="bax"/>
+            <line x1="60" y1="50"  x2="660" y2="50"  class="bgl"/>
+            <line x1="60" y1="90"  x2="660" y2="90"  class="bgl"/>
+            <line x1="60" y1="130" x2="660" y2="130" class="bgl"/>
+            <line x1="60" y1="165" x2="660" y2="165" class="bgl"/>
+            <text x="30" y="53"  class="blb">90%</text>
+            <text x="30" y="93"  class="blb">80%</text>
+            <text x="30" y="133" class="blb">70%</text>
+            <text x="30" y="168" class="blb">65%</text>
+            <!-- N=1 group -->
+            <rect x="75"  y="165" width="24" height="25" class="bar1"/>
+            <rect x="101" y="163" width="24" height="27" class="bar2"/>
+            <rect x="127" y="164" width="24" height="26" class="bar3"/>
+            <text x="90" y="208" class="blb">N=1</text>
+            <!-- N=4 group -->
+            <rect x="220" y="140" width="24" height="50" class="bar1"/>
+            <rect x="246" y="150" width="24" height="40" class="bar2"/>
+            <rect x="272" y="145" width="24" height="45" class="bar3"/>
+            <text x="235" y="208" class="blb">N=4</text>
+            <!-- N=16 group -->
+            <rect x="380" y="100" width="24" height="90" class="bar1"/>
+            <rect x="406" y="115" width="24" height="75" class="bar2"/>
+            <rect x="432" y="108" width="24" height="82" class="bar3"/>
+            <text x="395" y="208" class="blb">N=16</text>
+            <!-- N=64 group -->
+            <rect x="540" y="60"  width="24" height="130" class="bar1"/>
+            <rect x="566" y="80"  width="24" height="110" class="bar2"/>
+            <rect x="592" y="70"  width="24" height="120" class="bar3"/>
+            <text x="555" y="208" class="blb">N=64</text>
+            <!-- Legend -->
+            <rect x="65" y="215" width="12" height="10" class="bar1"/>
+            <text x="80" y="225" class="blb">Best-of-N (PRM)</text>
+            <rect x="200" y="215" width="12" height="10" class="bar2"/>
+            <text x="215" y="225" class="blb">Majority vote (self-consistency)</text>
+            <rect x="400" y="215" width="12" height="10" class="bar3"/>
+            <text x="415" y="225" class="blb">Best-of-N (ORM)</text>
+        </svg>
+    </div>
+
+    <div class="callout">
+        <div class="callout-label">When self-consistency fails</div>
+        <p>On tasks where the wrong answer is systematically more likely (the model has a consistent bias), majority vote amplifies the bias. A trained verifier is bias-agnostic &mdash; it scores the path, not the answer string. At small N (&le;4), PRM best-of-N consistently beats majority vote by 5&ndash;10 pp in MATH experiments.</p>
+    </div>
+</section>
+
+<section class="slide" id="slide-08">
+    <div class="slide-number">08</div>
+    <h2>Cost-Quality Curves</h2>
+    <p>Every inference-time search method has a cost-quality curve. The question an engineer must answer is: for a given accuracy target, which method is cheapest? The answer depends on base model quality, task type, and whether a PRM is available.</p>
+
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>Method</th><th>Relative cost @ 80% MATH</th><th>Relative cost @ 90% MATH</th><th>PRM required?</th><th>Parallelisable?</th></tr></thead>
+            <tbody>
+                <tr><td>Greedy decode</td><td>1&times;</td><td>Infeasible</td><td>No</td><td>N/A</td></tr>
+                <tr><td>Self-consistency N=16</td><td>16&times;</td><td>40&times;</td><td>No</td><td>Yes (fully)</td></tr>
+                <tr><td>Best-of-N (ORM) N=16</td><td>18&times;</td><td>32&times;</td><td>ORM only</td><td>Yes</td></tr>
+                <tr><td>Best-of-N (PRM) N=16</td><td>18&times;</td><td>22&times;</td><td>Yes</td><td>Yes</td></tr>
+                <tr><td>MCTS + PRM (adaptive)</td><td>12&times;</td><td>18&times;</td><td>Yes</td><td>Partial</td></tr>
+                <tr><td>Reasoning model (o1-style, medium)</td><td>8&times;</td><td>14&times;</td><td>Baked in</td><td>No (sequential)</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="callout">
+        <div class="callout-label">Snell et al. (2024) key finding</div>
+        <p>For easy&ndash;medium difficulty problems (MATH levels 1&ndash;3), best-of-N with an ORM is most compute-efficient. For hard problems (level 4&ndash;5, AIME), MCTS + PRM or a trained reasoning model dominates. The crossover point is where greedy-decode accuracy drops below &asymp;50%: best-of-N saturates, but sequential refinement (MCTS or native reasoning) still scales.</p>
+    </div>
+
+    <div class="callout">
+        <div class="callout-label">Practical engineering note</div>
+        <p>If you have no PRM and cannot afford to train one, <strong>self-consistency with N=8&ndash;16 is the default production choice</strong> for maths-heavy workloads. At N=16 you recover &asymp;70% of the gain that a trained PRM selector would give, at zero extra model-training cost. Budget is the primary signal: add a PRM only when N&gt;32 is insufficient and you have &gt;50k labelled examples to train on.</p>
+    </div>
+</section>
+
+<section class="slide" id="slide-09">
+    <div class="slide-number">09</div>
+    <h2>What to Take Away</h2>
+    <ul>
+        <li><strong>ORMs are outcome-level; PRMs are step-level.</strong> PRMs give denser, more accurate reward signal; ORMs are cheaper to train. For most production use, start with an ORM and promote to a PRM when you have &gt;50k step-labelled examples.</li>
+        <li><strong>PRM800K and Math-Shepherd set the benchmark.</strong> Human labels (PRM800K, 800k steps) beat MC-automated labels (Math-Shepherd, 390k steps) by &asymp;3 pp but at &asymp;100&times; the cost. MC estimation is the practical path to scale.</li>
+        <li><strong>MCTS + PRM is the Pareto frontier for hard problems.</strong> At equal compute, MCTS with a PRM outperforms best-of-N with an ORM when base-model accuracy is below &sim;50% greedy. The UCB selection drives exploration to under-visited promising branches.</li>
+        <li><strong>Self-consistency is the zero-cost baseline.</strong> Best-of-N majority vote with N=8&ndash;16 requires no verifier and recovers most of the ensemble gain. It fails when the model has systematic biases.</li>
+        <li><strong>ToT without an external scorer is unreliable.</strong> LLM self-evaluation of intermediate steps is poorly calibrated on formal maths. Use a trained PRM or symbolic checker, not prompting alone.</li>
+        <li><strong>Cost-quality curves cross over by difficulty.</strong> Invest in MCTS/PRM only for hard tasks; for easy tasks, greedy + self-consistency is cheapest.</li>
+    </ul>
+
+    <div class="callout">
+        <div class="callout-label">Where to next</div>
+        <p>Deck 03 closes the loop: given everything we now know about reasoning model capabilities and costs, when should you actually use one in production? We build a decision framework covering task type, latency budgets, cost per task, and hybrid pipeline patterns.</p>
+    </div>
+</section>
+
+<footer class="footer">
+    <p>Part of the <a href="https://github.com/BrendanJamesLynskey/LLM_Hub_Reasoning">Reasoning Models Series</a></p>
+    <p style="margin-top: 0.5rem; font-size: 0.8rem;"><a href="https://github.com/BrendanJamesLynskey/LLM_Hub_Reasoning">Back to Series Index</a></p>
+</footer>
+<script>
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function (e) {
+            e.preventDefault();
+            const target = document.querySelector(this.getAttribute('href'));
+            if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+    });
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.opacity = '1';
+                entry.target.style.transform = 'translateY(0)';
+            }
+        });
+    }, { threshold: 0.1 });
+    document.querySelectorAll('.slide').forEach(slide => {
+        slide.style.opacity = '0';
+        slide.style.transform = 'translateY(30px)';
+        slide.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+        observer.observe(slide);
+    });
+</script>
+</body>
+</html>
