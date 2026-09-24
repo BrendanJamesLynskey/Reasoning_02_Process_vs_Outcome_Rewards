@@ -9,15 +9,15 @@
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-primary: #0a0a0a;
-            --bg-card: #0d1117;
-            --bg-code: #161b22;
-            --text-primary: #e6edf3;
-            --text-secondary: #8b949e;
-            --accent: #76B900;
-            --accent-dim: #76B90044;
-            --accent-glow: #76B90033;
-            --border: #21262d;
+            --bg-primary: #0f2027;
+            --bg-card: #13272f;
+            --bg-code: #182f38;
+            --text-primary: #ede7dd;
+            --text-secondary: #8ca5a9;
+            --accent: #83c395;
+            --accent-dim: #83c39544;
+            --accent-glow: #83c39533;
+            --border: #23404a;
             --font-display: 'Space Grotesk', sans-serif;
             --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
             --font-body: 'Inter', sans-serif;
@@ -165,7 +165,7 @@
             border: 1px solid var(--border);
             padding: 0.05rem 0.35rem;
             border-radius: 3px;
-            color: #c9d1d9;
+            color: #cfd7d1;
         }
         .code-block {
             background: var(--bg-code);
@@ -178,7 +178,7 @@
             font-family: var(--font-mono);
             font-size: 0.75rem;
             color: var(--accent);
-            background: rgba(118, 185, 0, 0.08);
+            background: rgba(131,195,149,0.08);
             padding: 0.4rem 1rem;
             border-bottom: 1px solid var(--border);
         }
@@ -187,19 +187,19 @@
             font-family: var(--font-mono);
             font-size: 0.85rem;
             line-height: 1.6;
-            color: #c9d1d9;
+            color: #cfd7d1;
             background: transparent;
             border: none;
             padding: 0;
         }
-        .kw { color: #ff7b72; }
-        .fn { color: #d2a8ff; }
-        .str { color: #a5d6ff; }
-        .cm { color: #8b949e; font-style: italic; }
-        .num { color: #79c0ff; }
-        .type { color: #ffa657; }
-        .dir { color: #ff7b72; }
-        .mac { color: #ffa657; }
+        .kw { color: #f48f70; }
+        .fn { color: #d4c0ea; }
+        .str { color: #c3dbea; }
+        .cm { color: #8ca5a9; font-style: italic; }
+        .num { color: #a8cee8; }
+        .type { color: #eac48b; }
+        .dir { color: #f48f70; }
+        .mac { color: #eac48b; }
         .table-wrap {
             overflow-x: auto;
             margin: 1.25rem 0;
@@ -223,7 +223,7 @@
             color: var(--text-secondary);
         }
         tr:last-child td { border-bottom: none; }
-        tr:nth-child(even) td { background: rgba(13, 17, 23, 0.5); }
+        tr:nth-child(even) td { background: rgba(19,39,47,0.5); }
         .diagram-flow {
             display: flex;
             flex-wrap: wrap;
@@ -247,7 +247,7 @@
             text-align: center;
             white-space: nowrap;
         }
-        .diagram-box.accent { border-color: var(--accent); color: var(--accent); background: rgba(118, 185, 0, 0.08); }
+        .diagram-box.accent { border-color: var(--accent); color: var(--accent); background: rgba(131,195,149,0.08); }
         .diagram-box.dim { color: var(--text-secondary); border-color: var(--border); }
         .diagram-arrow { color: var(--accent); font-size: 1.3rem; font-weight: 700; }
         .diagram-vertical {
@@ -290,7 +290,7 @@
             border: 1px solid var(--border);
             color: var(--text-secondary);
         }
-        .hierarchy-item.accent { border-color: var(--accent); color: var(--accent); background: rgba(118, 185, 0, 0.08); }
+        .hierarchy-item.accent { border-color: var(--accent); color: var(--accent); background: rgba(131,195,149,0.08); }
         .diagram-grid {
             display: grid;
             gap: 0.75rem;
@@ -384,8 +384,8 @@
             margin-left: 0.3rem;
         }
         .badge.ok    { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
-        .badge.warn  { border-color: #ffa657; color: #ffa657; background: rgba(255,166,87,0.08); }
-        .badge.bad   { border-color: #ff7b72; color: #ff7b72; background: rgba(255,123,114,0.08); }
+        .badge.warn  { border-color: #eac48b; color: #eac48b; background: rgba(234,196,139,0.08); }
+        .badge.bad   { border-color: #f48f70; color: #f48f70; background: rgba(244,143,112,0.08); }
         @media (max-width: 640px) {
             .slide { padding: 3rem 1rem; min-height: auto; }
             .slide-number { font-size: 3rem; top: 1.5rem; right: 1rem; }
@@ -491,20 +491,20 @@
     <div class="canvas-wrap">
         <svg viewBox="0 0 700 240" width="700" height="240" xmlns="http://www.w3.org/2000/svg">
             <style>
-                .stepbox { fill: #161b22; stroke: #21262d; rx: 4; }
-                .steppos { fill: rgba(118,185,0,0.10); stroke: #76B900; }
-                .stepneg { fill: rgba(255,123,114,0.10); stroke: #ff7b72; }
-                .stepneu { fill: rgba(255,166,87,0.10); stroke: #ffa657; }
-                .steptxt { fill: #e6edf3; font-family: 'Space Grotesk', sans-serif; font-size: 11px; }
-                .steplab { fill: #76B900; font-family: 'JetBrains Mono', monospace; font-size: 10px; }
-                .steplabN { fill: #ff7b72; font-family: 'JetBrains Mono', monospace; font-size: 10px; }
-                .steplabW { fill: #ffa657; font-family: 'JetBrains Mono', monospace; font-size: 10px; }
-                .arr { stroke: #30363d; stroke-width: 1; fill: none; marker-end: url(#msm); }
-                .ttl { fill: #76B900; font-family: 'Space Grotesk', sans-serif; font-size: 12px; font-weight: 600; }
+                .stepbox { fill: #182f38; stroke: #23404a; rx: 4; }
+                .steppos { fill: rgba(131,195,149,0.10); stroke: #83c395; }
+                .stepneg { fill: rgba(244,143,112,0.10); stroke: #f48f70; }
+                .stepneu { fill: rgba(234,196,139,0.10); stroke: #eac48b; }
+                .steptxt { fill: #ede7dd; font-family: 'Space Grotesk', sans-serif; font-size: 11px; }
+                .steplab { fill: #83c395; font-family: 'JetBrains Mono', monospace; font-size: 10px; }
+                .steplabN { fill: #f48f70; font-family: 'JetBrains Mono', monospace; font-size: 10px; }
+                .steplabW { fill: #eac48b; font-family: 'JetBrains Mono', monospace; font-size: 10px; }
+                .arr { stroke: #2f4d57; stroke-width: 1; fill: none; marker-end: url(#msm); }
+                .ttl { fill: #83c395; font-family: 'Space Grotesk', sans-serif; font-size: 12px; font-weight: 600; }
             </style>
             <defs>
                 <marker id="msm" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                    <path d="M 0 0 L 10 5 L 0 10 z" fill="#30363d"/>
+                    <path d="M 0 0 L 10 5 L 0 10 z" fill="#2f4d57"/>
                 </marker>
             </defs>
             <text x="10" y="20" class="ttl">PRM annotation: each step in a chain-of-thought is labelled independently</text>
@@ -582,15 +582,15 @@
     <div class="canvas-wrap">
         <svg viewBox="0 0 700 280" width="700" height="280" xmlns="http://www.w3.org/2000/svg">
             <style>
-                .node { fill: #161b22; stroke: #30363d; }
-                .node.acc { fill: rgba(118,185,0,0.10); stroke: #76B900; }
-                .node.bad { fill: rgba(255,123,114,0.08); stroke: #ff7b72; }
-                .node.sel { fill: rgba(118,185,0,0.20); stroke: #76B900; stroke-width:2; }
-                .ntxt { fill: #e6edf3; font-family: 'JetBrains Mono', monospace; font-size: 10px; text-anchor: middle; }
-                .nsub { fill: #8b949e; font-family: 'JetBrains Mono', monospace; font-size: 9px; text-anchor: middle; }
-                .edge { stroke: #30363d; stroke-width: 1; fill: none; }
-                .edgea { stroke: #76B900; stroke-width: 1.5; fill: none; stroke-dasharray: 4 2; }
-                .ttl { fill: #76B900; font-family: 'Space Grotesk', sans-serif; font-size: 12px; font-weight: 600; }
+                .node { fill: #182f38; stroke: #2f4d57; }
+                .node.acc { fill: rgba(131,195,149,0.10); stroke: #83c395; }
+                .node.bad { fill: rgba(244,143,112,0.08); stroke: #f48f70; }
+                .node.sel { fill: rgba(131,195,149,0.20); stroke: #83c395; stroke-width:2; }
+                .ntxt { fill: #ede7dd; font-family: 'JetBrains Mono', monospace; font-size: 10px; text-anchor: middle; }
+                .nsub { fill: #8ca5a9; font-family: 'JetBrains Mono', monospace; font-size: 9px; text-anchor: middle; }
+                .edge { stroke: #2f4d57; stroke-width: 1; fill: none; }
+                .edgea { stroke: #83c395; stroke-width: 1.5; fill: none; stroke-dasharray: 4 2; }
+                .ttl { fill: #83c395; font-family: 'Space Grotesk', sans-serif; font-size: 12px; font-weight: 600; }
             </style>
             <text x="10" y="18" class="ttl">MCTS reasoning tree &mdash; each node is a partial solution; PRM scores guide expansion</text>
             <!-- Root -->
@@ -718,13 +718,13 @@ PROBLEM = <span class="str">"Find all integer solutions to x&sup2; + y&sup2; = 2
     <div class="canvas-wrap">
         <svg viewBox="0 0 700 230" width="700" height="230" xmlns="http://www.w3.org/2000/svg">
             <style>
-                .bax { stroke: #30363d; stroke-width: 1; }
-                .bgl { stroke: #21262d; stroke-width: 0.5; stroke-dasharray: 3 3; }
-                .blb { fill: #8b949e; font-family: 'JetBrains Mono', monospace; font-size: 10px; }
-                .btt { fill: #76B900; font-family: 'Space Grotesk', sans-serif; font-size: 12px; font-weight: 600; }
-                .bar1 { fill: rgba(118,185,0,0.7); }
-                .bar2 { fill: rgba(210,168,255,0.5); }
-                .bar3 { fill: rgba(255,166,87,0.5); }
+                .bax { stroke: #2f4d57; stroke-width: 1; }
+                .bgl { stroke: #23404a; stroke-width: 0.5; stroke-dasharray: 3 3; }
+                .blb { fill: #8ca5a9; font-family: 'JetBrains Mono', monospace; font-size: 10px; }
+                .btt { fill: #83c395; font-family: 'Space Grotesk', sans-serif; font-size: 12px; font-weight: 600; }
+                .bar1 { fill: rgba(131,195,149,0.7); }
+                .bar2 { fill: rgba(212,192,234,0.5); }
+                .bar3 { fill: rgba(234,196,139,0.5); }
             </style>
             <text x="10" y="18" class="btt">MATH accuracy vs N (schematic, Llama-70B regime)</text>
             <line x1="60" y1="30" x2="60" y2="190" class="bax"/>
