@@ -6,7 +6,7 @@
     <title>Reasoning 02 — PRMs, ORMs, MCTS and Verifier-Scored Sampling</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=Manrope:wght@300;400;500;600;700&family=Source+Code+Pro:ital,wght@0,400;0,500;0,600;0,700;1,400;1,700&display=swap" rel="stylesheet">
     <style>
         :root {
             --bg-primary: #0f2027;
@@ -18,9 +18,9 @@
             --accent-dim: #83c39544;
             --accent-glow: #83c39533;
             --border: #23404a;
-            --font-display: 'Space Grotesk', sans-serif;
-            --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
-            --font-body: 'Inter', sans-serif;
+            --font-display: 'Sora', sans-serif;
+            --font-mono: 'Source Code Pro', 'Source Code Pro', monospace;
+            --font-body: 'Manrope', sans-serif;
             --max-width: 900px;
         }
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -495,12 +495,12 @@
                 .steppos { fill: rgba(131,195,149,0.10); stroke: #83c395; }
                 .stepneg { fill: rgba(244,143,112,0.10); stroke: #f48f70; }
                 .stepneu { fill: rgba(234,196,139,0.10); stroke: #eac48b; }
-                .steptxt { fill: #ede7dd; font-family: 'Space Grotesk', sans-serif; font-size: 11px; }
-                .steplab { fill: #83c395; font-family: 'JetBrains Mono', monospace; font-size: 10px; }
-                .steplabN { fill: #f48f70; font-family: 'JetBrains Mono', monospace; font-size: 10px; }
-                .steplabW { fill: #eac48b; font-family: 'JetBrains Mono', monospace; font-size: 10px; }
+                .steptxt { fill: #ede7dd; font-family: 'Sora', sans-serif; font-size: 11px; }
+                .steplab { fill: #83c395; font-family: 'Source Code Pro', monospace; font-size: 10px; }
+                .steplabN { fill: #f48f70; font-family: 'Source Code Pro', monospace; font-size: 10px; }
+                .steplabW { fill: #eac48b; font-family: 'Source Code Pro', monospace; font-size: 10px; }
                 .arr { stroke: #2f4d57; stroke-width: 1; fill: none; marker-end: url(#msm); }
-                .ttl { fill: #83c395; font-family: 'Space Grotesk', sans-serif; font-size: 12px; font-weight: 600; }
+                .ttl { fill: #83c395; font-family: 'Sora', sans-serif; font-size: 12px; font-weight: 600; }
             </style>
             <defs>
                 <marker id="msm" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
@@ -586,11 +586,11 @@
                 .node.acc { fill: rgba(131,195,149,0.10); stroke: #83c395; }
                 .node.bad { fill: rgba(244,143,112,0.08); stroke: #f48f70; }
                 .node.sel { fill: rgba(131,195,149,0.20); stroke: #83c395; stroke-width:2; }
-                .ntxt { fill: #ede7dd; font-family: 'JetBrains Mono', monospace; font-size: 10px; text-anchor: middle; }
-                .nsub { fill: #8ca5a9; font-family: 'JetBrains Mono', monospace; font-size: 9px; text-anchor: middle; }
+                .ntxt { fill: #ede7dd; font-family: 'Source Code Pro', monospace; font-size: 10px; text-anchor: middle; }
+                .nsub { fill: #8ca5a9; font-family: 'Source Code Pro', monospace; font-size: 9px; text-anchor: middle; }
                 .edge { stroke: #2f4d57; stroke-width: 1; fill: none; }
                 .edgea { stroke: #83c395; stroke-width: 1.5; fill: none; stroke-dasharray: 4 2; }
-                .ttl { fill: #83c395; font-family: 'Space Grotesk', sans-serif; font-size: 12px; font-weight: 600; }
+                .ttl { fill: #83c395; font-family: 'Sora', sans-serif; font-size: 12px; font-weight: 600; }
             </style>
             <text x="10" y="18" class="ttl">MCTS reasoning tree &mdash; each node is a partial solution; PRM scores guide expansion</text>
             <!-- Root -->
@@ -720,8 +720,8 @@ PROBLEM = <span class="str">"Find all integer solutions to x&sup2; + y&sup2; = 2
             <style>
                 .bax { stroke: #2f4d57; stroke-width: 1; }
                 .bgl { stroke: #23404a; stroke-width: 0.5; stroke-dasharray: 3 3; }
-                .blb { fill: #8ca5a9; font-family: 'JetBrains Mono', monospace; font-size: 10px; }
-                .btt { fill: #83c395; font-family: 'Space Grotesk', sans-serif; font-size: 12px; font-weight: 600; }
+                .blb { fill: #8ca5a9; font-family: 'Source Code Pro', monospace; font-size: 10px; }
+                .btt { fill: #83c395; font-family: 'Sora', sans-serif; font-size: 12px; font-weight: 600; }
                 .bar1 { fill: rgba(131,195,149,0.7); }
                 .bar2 { fill: rgba(212,192,234,0.5); }
                 .bar3 { fill: rgba(234,196,139,0.5); }
